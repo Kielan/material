@@ -26,8 +26,10 @@ angular.module('material.components.input', [
  * Input and textarea elements will not behave properly unless the md-input-container
  * parent is provided.
  *
- * @param md-is-error {expression=} When the given expression evaluates to true, the input container will go into error state. Defaults to erroring if the input has been touched and is invalid.
- * @param md-no-float {boolean=} When present, placeholders will not be converted to floating labels
+ * @param md-is-error {expression=} When the given expression evaluates to true, the input container
+ *   will go into error state. Defaults to erroring if the input has been touched and is invalid.
+ * @param md-no-float {boolean=} When present, placeholders will not be converted to floating
+ *   labels. **Note:** This is automatically added if both a placeholder and a label are provided.
  *
  * @usage
  * <hljs lang="html">
@@ -69,6 +71,9 @@ function mdInputContainerDirective($mdTheming, $parse) {
     self.setHasValue = function(hasValue) {
       $element.toggleClass('md-input-has-value', !!hasValue);
     };
+    self.setHasPlaceholder = function(hasPlaceholder) {
+      $element.toggleClass('md-input-has-placeholder', !!hasPlaceholder);
+    };
     self.setInvalid = function(isInvalid) {
       $element.toggleClass('md-input-invalid', !!isInvalid);
     };
@@ -106,10 +111,15 @@ function labelDirective() {
  * @description
  * Use the `<input>` or the  `<textarea>` as a child of an `<md-input-container>`.
  *
- * @param {number=} md-maxlength The maximum number of characters allowed in this input. If this is specified, a character counter will be shown underneath the input.<br/><br/>
- * The purpose of **`md-maxlength`** is exactly to show the max length counter text. If you don't want the counter text and only need "plain" validation, you can use the "simple" `ng-maxlength` or maxlength attributes.
- * @param {string=} aria-label Aria-label is required when no label is present.  A warning message will be logged in the console if not present.
- * @param {string=} placeholder An alternative approach to using aria-label when the label is not present.  The placeholder text is copied to the aria-label attribute.
+ * @param {number=} md-maxlength The maximum number of characters allowed in this input. If this is
+ *   specified, a character counter will be shown underneath the input.<br/><br/>
+ *   The purpose of **`md-maxlength`** is exactly to show the max length counter text. If you don't
+ *   want the counter text and only need "plain" validation, you can use the "simple" `ng-maxlength`
+ *   or maxlength attributes.
+ * @param {string=} aria-label Aria-label is required when no label is present.  A warning message
+ *   will be logged in the console if not present.
+ * @param {string=} placeholder An alternative approach to using aria-label when the label is not
+ *   PRESENT. The placeholder text is copied to the aria-label attribute.
  * @param md-no-autogrow {boolean=} When present, textareas will not grow automatically.
  *
  * @usage
@@ -390,21 +400,29 @@ function placeholderDirective($log) {
 
   function postLink(scope, element, attr, inputContainer) {
     if (!inputContainer) return;
-    if (angular.isDefined(inputContainer.element.attr('md-no-float'))) return;
 
-    var placeholderText = attr.placeholder;
-    element.removeAttr('placeholder');
+    // Check for placeholder+label support
+    inputContainer.setHasPlaceholder(true);
 
-    if ( inputContainer.element.find('label').length == 0 ) {
+    // If we have both, add the md-no-float attribute automatically
+    var label = inputContainer.element.find('label');
+    if (label && label.length) {
+      inputContainer.element.attr('md-no-float');
+    } else {
+      // Don't to anything if they specify the md-no-float attribute
+      if (angular.isDefined(inputContainer.element.attr('md-no-float'))) return;
+
+      // Otherwise, grab/remove the placeholder
+      var placeholderText = attr.placeholder;
+      element.removeAttr('placeholder');
+
+      // And add a label if one doesn't exist
       if (inputContainer.input && inputContainer.input[0].nodeName != 'MD-SELECT') {
         var placeholder = '<label ng-click="delegateClick()">' + placeholderText + '</label>';
 
         inputContainer.element.addClass('md-icon-float');
         inputContainer.element.prepend(placeholder);
       }
-    } else if (element[0].nodeName != 'MD-SELECT') {
-      $log.warn("The placeholder='" + placeholderText + "' will be ignored since this md-input-container has a child label element.");
     }
-
   }
 }
